@@ -455,6 +455,10 @@ class parser:
             graph.ListSubs = list_subs
             # парсим по частям выражение
         graph.leftPart, graph.rightPart = eqn.split('=')
+        if graph.leftPart == '' or graph.rightPart == '':
+            self.parent.parent.showErrorEqn(
+                graph.num, 'Одна из частей уравнеия пустая')
+            return              
         # dictParamEqn['leftPart'], dictParamEqn['rightPart'] = eqn.split('=')
         # print(dictParamEqn['leftPart'], dictParamEqn['rightPart'])
         # return dictParamEqn
