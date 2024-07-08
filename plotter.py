@@ -34,7 +34,6 @@ class plotter():
             self.list_eqn.extend([None] * (number - self.cntEqn))
             self.cntEqn = number
             new = True
-        # print(number, len(self.list_eqn))
         if self.list_eqn[number] == None:
             obj = dataGraph(name, number, self.parseEqn, self)
             self.list_eqn[number] = obj
@@ -48,13 +47,21 @@ class plotter():
         # определяем надобность изменения размеров
         xpos, ypos = self.list_eqn[eqnNum].xposition, self.list_eqn[eqnNum].yposition
         xfftPos, yfftPos = self.list_eqn[eqnNum].fftxpos, self.list_eqn[eqnNum].fftypos
-        if max(xfftPos, xpos) > self.maxxPos or max(yfftPos, ypos) > self.maxyPos:
-            self.maxyPos = max(yfftPos, ypos, self.maxyPos)
-            self.maxxPos = max(xfftPos, xpos, self.maxxPos)
-            self.resizeSubPlot()
-            self.updateDict(eqnNum)
+        if xfftPos != None and yfftPos != None:
+            if max(xfftPos, xpos) > self.maxxPos or max(yfftPos, ypos) > self.maxyPos:
+                self.maxyPos = max(yfftPos, ypos, self.maxyPos)
+                self.maxxPos = max(xfftPos, xpos, self.maxxPos)
+                self.resizeSubPlot()
+                self.updateDict(eqnNum)
+        else:
+            if xpos > self.maxxPos or ypos > self.maxyPos:
+                self.maxyPos = max(ypos, self.maxyPos)
+                self.maxxPos = max(xpos, self.maxxPos)
+                self.resizeSubPlot()
+                self.updateDict(eqnNum)
 # определяем наличие уравнения в списке
-
+        if (xpos, ypos) not in self.plotGrid.keys() or (xfftPos, yfftPos) not in self.plotGrid.keys():
+            self.updateDict(eqnNum)
         if new:
             self.list_eqn[eqnNum].plotPLTGraph(
                 self.plotGrid[(xpos, ypos)]['ax'])
@@ -64,7 +71,7 @@ class plotter():
             # перестраиваем все графики в это окне
             self.plotCurrEqn(xpos, ypos, True)
             self.plotCurrEqn(xfftPos, yfftPos, True)
-        var = self.list_eqn[eqnNum].expressedVar
+        var=self.list_eqn[eqnNum].expressedVar
         if var in self.KnownAxis.keys():
             self.KnownAxis[var].add(eqnNum)
         else:
@@ -74,7 +81,6 @@ class plotter():
         # self.canvas = FigureCanvas(self.fig)
         # self.canvas.draw()
         # self.fig.show()
-
     def defineax(self, xpos, ypos):
         if self.maxxPos == 0:
             if self.maxyPos == 0:
@@ -117,6 +123,8 @@ class plotter():
             return True
         else:
             pass  # вставить функцию перерисовки графиков в 3d
+
+        
     def moveAxis(self, ax, d3d=False):
         if d3d:
             ax.spines['top'].set_visible(False)
@@ -131,6 +139,8 @@ class plotter():
             ax.spines['right'].set_visible(False)
 
     def plotCurrEqn(self, currX, currY, clear=False):
+        if (currX, currY) not in self.plotGrid.keys():
+            return
         listEqn = self.plotGrid[(currX, currY)]['numbers']
         ax = self.plotGrid[(currX, currY)]['ax']
         if clear and type(ax) != int:
@@ -152,12 +162,9 @@ class plotter():
                 if self.plotGrid[(currX, currY)]['graphType'] == 'fft' or self.plotGrid[(currX, currY)]['graphType'] == 'fft2':
                     for cEqn in listEqn:
                         self.list_eqn[cEqn].plotFFT(ax)
-                        print('plotFFT')
                 else:
                     for cEqn in listEqn:
                         self.list_eqn[cEqn].plotPLTGraph(ax)
-                        print('plotGraph')
-        print()
         # self.fig.show()
         # self.plotGrid[(currX, currY)]['ax'] = ax
 
@@ -215,7 +222,7 @@ class plotter():
                 Eqn.fftxpos, Eqn.fftypos = Eqn.xposition, Eqn.yposition + 1
             elif self.fftPlot == 'top':
                 Eqn.fftxpos, Eqn.fftypos = Eqn.origxpos * 2, Eqn.origypos
-                Eqn.xposition, Eqn.yposition = Eqn.xposition + 1, Eqn.yposition
+                Eqn.xposition, Eqn.yposition = Eqn.fftxpos + 1, Eqn.fftypos
             elif self.fftPlot == 'left':
                 Eqn.fftxpos, Eqn.fftypos = Eqn.origxpos, Eqn.origypos * 2
                 Eqn.xposition, Eqn.yposition = Eqn.xposition, Eqn.yposition + 1
@@ -224,25 +231,30 @@ class plotter():
                 Eqn.xposition, Eqn.yposition = Eqn.origxpos, Eqn.origypos
 
     def updateDict(self, eqnNum):
+        '''обновляет self.PlotGrid для графика и его fft если нет записи, то добавляет ее'''
         eqn = self.list_eqn[eqnNum]
         xpos, ypos = eqn.xposition, eqn.yposition
         if (xpos, ypos) in self.plotGrid.keys():
-            self.plotGrid[(xpos, ypos)]['numbers'].append(eqnNum)
+            if eqnNum not in self.plotGrid[(xpos, ypos)]['numbers']:
+                self.plotGrid[(xpos, ypos)]['numbers'].append(eqnNum)
         else:
             self.plotGrid.update({(xpos, ypos): {
                                  'graphDem': eqn.graphDem, 'graphType': eqn.graphType, 'numbers': [eqnNum], 'ax': self.defineax(xpos, ypos)}})
             self.moveAxis(self.defineax(xpos, ypos), eqn.graphDem == '3D')
         # разбираемся c fft
         # здесь мб ошибка с наложением графиков на fft
-        if (eqn.fftxpos, eqn.fftypos) in self.plotGrid.keys():
-            self.plotGrid[(eqn.fftxpos, eqn.fftypos)
-                          ]['numbers'].append(eqnNum)
-        else:
-            if self.plotGrid[(xpos, ypos)]['graphDem'] == '3D':
-                self.plotGrid.update({(xfftPos, yfftPos): {
-                                     'graphDem': '3D', 'graphType': 'fft2', 'numbers': [eqnNum], 'ax': self.defineax(eqn.fftxpos, eqn.fftypos)}})
-                self.moveAxis(self.defineax(eqn.fftxpos, eqn.fftypos), True)
+        if eqn.fftxpos != None and eqn.fftypos != None:
+            if (eqn.fftxpos, eqn.fftypos) in self.plotGrid.keys():
+                self.plotGrid[(eqn.fftxpos, eqn.fftypos)
+                              ]['numbers'].append(eqnNum)
             else:
-                self.plotGrid.update({(eqn.fftxpos, eqn.fftypos): {
-                    'graphDem': '2D', 'graphType': 'fft', 'numbers': [eqnNum], 'ax': self.defineax(eqn.fftxpos, eqn.fftypos)}})
-                self.moveAxis(self.defineax(eqn.fftxpos, eqn.fftypos), False)
+                if self.plotGrid[(xpos, ypos)]['graphDem'] == '3D':
+                    self.plotGrid.update({(xfftPos, yfftPos): {
+                                         'graphDem': '3D', 'graphType': 'fft2', 'numbers': [eqnNum], 'ax': self.defineax(eqn.fftxpos, eqn.fftypos)}})
+                    self.moveAxis(self.defineax(
+                        eqn.fftxpos, eqn.fftypos), True)
+                else:
+                    self.plotGrid.update({(eqn.fftxpos, eqn.fftypos): {
+                        'graphDem': '2D', 'graphType': 'fft', 'numbers': [eqnNum], 'ax': self.defineax(eqn.fftxpos, eqn.fftypos)}})
+                    self.moveAxis(self.defineax(
+                        eqn.fftxpos, eqn.fftypos), False)
