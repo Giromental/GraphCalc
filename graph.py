@@ -1,8 +1,10 @@
 import sympy as sp
+from sympy.plotting import plot3d
 from parser import parser
 from matplotlib.pyplot import plot
-from mpl_toolkits import mplot3d
 from matplotlib import contour
+import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
 from numpy.fft import fft, fft2, fftfreq
 import numpy as np
 # from matplotlib import rcParams
@@ -53,8 +55,7 @@ class dataGraph():
         self.infoPart = None
         self.NeedSubs = False
         self.expressedVar = None
-        self.listType2d = ['norm', 'implicit']
-        self.listType3d =['norm', 'contour', 'wireframe']
+
         
     def updateFunc(self, eqn):
         self.parseEqn.parseParam(self, eqn)
@@ -105,10 +106,37 @@ class dataGraph():
                         self.recognizeFuncLeft = self.recognizeFuncLeft.subs(
                             currAx, self.parent.list_eqn[self.parent.KnownAxis[currAx][0]].infoPart)
             # добавить проверки на количество осей и параметры
+        cVarR, cVarL = self.recognizeFuncRight.atoms(
+            sp.Symbol), self.recognizeFuncLeft.atoms(sp.Symbol)
+        cVar = set()
+        cVar.update(cVarR)
+        cVar.update(cVarL)
+          # сюда допилить проверку параметров
+        if len(cVar) == 3:
+            self.graphDem='3D'
+            if (len(cVarR) == 1 and len(cVarL) == 2) or (len(cVarR) == 2 and len(cVarL) == 1):
+                self.graphType='norm'
+            else:
+                self.graphType='implicit'
+        elif len(cVar) == 2 or len(cVar) == 1:
+            self.graphDem = '2D'
+            # if (len(cVarR) == 0 and len(cVarL) == 2) or (len(cVarR) == 2 and len(cVarL) == 0):
+            if len(cVarL) == 2 or len(cVarR) == 2:
+                self.graphType = 'implicit'
+            else:
+                self.graphType = 'norm'
+        elif len(cVar) == 0:
+            self.parent.parent.showErrorEqn(
+                self.num, 'В уравнении не обнаружено переменных')
+            return
+        else:
+            self.parent.parent.showErrorEqn(
+                self.num, 'В уравнении более 3х независимых переменных')
+            return
         self.plotGraph()
     def plotGraph(self):
         if self.recognizeFuncLeft == None or self.recognizeFuncRight == None:
-            return 0
+            return
         if type(self.recognizeFuncLeft) == self.symbolsType:
             plotPart=self.recognizeFuncRight
             self.infoPart=self.recognizeFuncRight
@@ -131,12 +159,12 @@ class dataGraph():
                     # (self.recognizeFuncRight, self.xlim[0], self.xlim[1])
                     # self.plotData.show()
             case '3D':
-                self.plotData = sp.plot3d(
-                    plotPart, xlim=self.xlim, ylim=self.ylim, zlim=serlf.zlim, show=False)
+                self.plotData = plot3d(
+                    plotPart, xlim=self.xlim, ylim=self.ylim, zlim=self.zlim, show=False)
             case _:
                 self.parent.parent.showErrorEqn(
                     self.num, 'Неизвестная размерность графика')
-    def move_sympyplot_to_axes(p, ax):
+    def move_sympyplot_to_axes(self, p, ax):
         backend = p.backend(p)
         backend.ax = ax
         backend._process_series(
@@ -145,17 +173,12 @@ class dataGraph():
         
     def plotPLTGraph(self, ax):
         if self.plotData == None or self.show == False:
-            return 0
+            return 
         if not (self.fftshow):
             return
-            '''
-            if self.graphDem == '3D':
-                ax.plot_surface()
-            else:
-                ax.plot()
-            '''
+        print(self.graphType)
         if self.graphDem == '2D':
-            if self.graphType == 'Norm':
+            if self.graphType == 'norm':
                 if self.x == None or self.y == None:
                     self.x, self.y = self.plotData[0].get_data()
                 ax.plot(self.x, self.y, color=self.color)
@@ -166,19 +189,28 @@ class dataGraph():
                     ax.set_ylim(self.ylim)
                     '''
             elif self.graphType == 'implicit':
-                # не придумал как менять его цвет
                 self.move_sympyplot_to_axes(self.plotData, ax) 
         elif self.graphDem == '3D':
-            if self.graphType == 'Norm':
-                if self.x == None or self.y == None or self.z == None:
+            if not (hasattr(ax, 'get_zlim')):
+                ax = self.parent.convertAxes23D(ax)
+                ind = ax.get_subplotspec().num1
+                xpos, ypos = ind // (self.parent.maxxPos +
+                                     1), ind % (self.parent.maxyPos + 1)
+                if (xpos, ypos) in self.parent.plotGrid.keys():
+                    print('run plotCurrEqn', xpos, ypos)
+                    self.parent.plotCurrEqn(xpos, ypos, True)
+                    # return
+            if self.graphType == 'norm':
+                if type(self.x) == type(None) or type(self.y) == type(None) or type(self.z) == type(None):
                     self.x, self.y, self.z = self.plotData[0].get_meshes()
+                print(hasattr(ax, 'get_zlim'))
                 ax.plot_surface(self.x, self.y, self.z, cmap=self.color)
             elif self.graphType == 'contour':
-                if self.x == None or self.y == None or self.z == None:
+                if type(self.x) == type(None) or type(self.y) == type(None) or type(self.z) == type(None):
                     self.x, self.y, self.z = self.plotData[0].get_meshes()
                 ax.contour(self.x, self.y, self.z, cmap=self.color)
             elif self.graphType == 'wireframe':
-                if self.x == None or self.y == None or self.z == None:
+                if type(self.x) == type(None) or type(self.y) == type(None) or type(self.z) == type(None):
                     self.x, self.y, self.z = self.plotData[0].get_meshes()
                 ax.plot_wireframe(self.x, self.y, self.z, color=self.color,
                                   rstride=self.stride[0], cstride=self.stride[1])
@@ -186,9 +218,9 @@ class dataGraph():
     def plotFFT(self, ax):
         if self.show == False:
             return
-        elif self.x == None or self.y == None:
+        elif type(self.x) == type(None) or type(self.y) == type(None):
             return
-        elif self.graphDem == '3D' and self.z == None:
+        elif self.graphDem == '3D' and type(self.z) == type(None):
             return 
         if self.graphDem == '2D' and self.graphType != 'implicit':
             if len(self.SigFFT) == 0 or len(self.SFreq) == 0:
@@ -211,4 +243,12 @@ class dataGraph():
                 ax.plot(self.SFreq[1:-1], np.abs(self.SigFFT[1:-1]))
  
         elif self.graphDem == '3D':
+            if not (hasattr(ax, 'get_zlim')):
+                ax = self.parent.convertAxes23D(ax)
+                ind = ax.get_subplotspec().num1
+                xpos, ypos = ind // (self.parent.maxxPos +
+                                     1), ind % (self.parent.maxyPos + 1)
+                if (xpos, ypos) in self.parent.plotGrid.keys():
+                    print('run plotCurrEqn', xpos, ypos)
+                    self.parent.plotCurrEqn(xpos, ypos, True)            
             pass  # я пока вообще хз как

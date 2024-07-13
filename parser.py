@@ -52,7 +52,6 @@ class parser:
         # проверяем необходимость подстановок
         list_var=[]
         operandList=re.split(self.mega_regexp, eqn)
-        print(operandList)
         operandList = filter(None, operandList)
         operandList=list(filter((" ").__ne__, operandList))
         recognizeStr=''
@@ -116,9 +115,7 @@ class parser:
                 else:
                     recognizeStr += operandList[cO]
             else:
-                # print(operandList[cO])
                 operand = operandList[cO].replace(' ', '')
-                print(operand)
                 if operand not in list_var:
                     list_var.append(operand)
                 if cO != lenPart - 1 and operandList[cO + 1] not in ')]}>' and cntDrwdedBrace > 0:
@@ -130,7 +127,6 @@ class parser:
                     recognizeStr += operandList[cO]
         recognizeStr += ')' * cntDrwdedBrace  # закрываем все скобки
         recEqn = sp.sympify(recognizeStr)
-        print('list_var', list_var)
         if part == 'right':
             graph.recognizeFuncRight = recEqn
             # graph.recognizeVarRight = list_eqn
@@ -377,13 +373,13 @@ class parser:
                 if leqn >= 6 + iGtype:
                     imin = min(imin, iGType)
                     tmp = self.extractWord(eqn[iGType + 6:])
-                    if graph.graphDem == '2D' and tmp in graph.listType2d:
+                    if graph.graphDem == '2D' and tmp in graph.parent.listType2d:
                             graph.graphDem = tmp
-                    elif graph.graphDem == '2D' and tmp in graph.listType3d:
+                    elif graph.graphDem == '2D' and tmp in graph.parent.listType3d:
                         # перерисовываем в 3d
                         graph.graphDem = '3D'
                         graph.graphType = tmp
-                    elif graph.graphDem == '3D' and tmp in graph.listType3d:
+                    elif graph.graphDem == '3D' and tmp in graph.parent.listType3d:
                         graph.graphType = tmp
                     else:
                             self.parent.parent.showErrorEqn(
@@ -459,11 +455,7 @@ class parser:
             self.parent.parent.showErrorEqn(
                 graph.num, 'Одна из частей уравнеия пустая')
             return              
-        # dictParamEqn['leftPart'], dictParamEqn['rightPart'] = eqn.split('=')
-        # print(dictParamEqn['leftPart'], dictParamEqn['rightPart'])
-        # return dictParamEqn
-        
-        
+
     def sorWithLen(x, y):
         if len(x) > len(y):
             return True
@@ -501,7 +493,6 @@ class parser:
         while itmp < len(s) and s[itmp] not in ' ,.':  # s[itmp] != ' ':
             sumstr += s[itmp]
             itmp += 1
-        print('word = ', sumstr)
         return sumstr
     def isNum(self, eqn):
         eqn = eqn.replace(',', '.')

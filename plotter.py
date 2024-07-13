@@ -25,6 +25,8 @@ class plotter():
         # при очистке фигура удаляется и пересоздается, поэтому флаг показывает необходимость пересвязать canvas
         self.neededReDrow = False
         self.KnownAxis = dict()
+        self.listType2d = ['norm', 'implicit']
+        self.listType3d =['norm', 'contour', 'wireframe', 'implicit']        
         
     def addNewEqn(self, eqn, name):
         number = int(name[3:])
@@ -62,11 +64,17 @@ class plotter():
 # определяем наличие уравнения в списке
         if (xpos, ypos) not in self.plotGrid.keys() or (xfftPos, yfftPos) not in self.plotGrid.keys():
             self.updateDict(eqnNum)
+        if eqnNum not in self.plotGrid[(xpos, ypos)]['numbers']:
+            self.plotGrid[(xpos, ypos)]['numbers'].append(eqnNum)
+        if xfftPos != None and yfftPos != None:
+            if eqnNum not in self.plotGrid[(xfftPos, yfftPos)]['numbers']:
+                self.plotGrid[(xfftPos, yfftPos)]['numbers'].append(eqnNum)
         if new:
             self.list_eqn[eqnNum].plotPLTGraph(
                 self.plotGrid[(xpos, ypos)]['ax'])
-            self.list_eqn[eqnNum].plotFFT(
-                self.plotGrid[(xfftPos, yfftPos)]['ax'])
+            if xfftPos != None and yfftPos != None:
+                self.list_eqn[eqnNum].plotFFT(
+                    self.plotGrid[(xfftPos, yfftPos)]['ax'])
         else:
             # перестраиваем все графики в это окне
             self.plotCurrEqn(xpos, ypos, True)
@@ -112,18 +120,44 @@ class plotter():
         for currEqn in self.plotGrid.keys(): # строим графики
             self.plotCurrEqn(*currEqn)
 
-    def checkType(self, listEqn):  # переписать целиком
+    def checkType(self, dictEqn):  # переписать целиком
         lType, lDem = [], []
-        for i in listEqn:
+        for i in dictEqn['numbers']:
             lType.append(self.list_eqn[i].graphType)
             lDem.append(self.list_eqn[i].graphDem)
         sType = set(lType)
         sDem = set(lType)
+        fNorm = any(
+            x in self.listType2d or x in self.listType3d for x in sType)
+        # fImp = 'implicit' in sType
+        fFFT = 'fft' in sType or 'fft2' in sType
+        fImp = 'implicit' in sType
         if len(sDem) == 1 and len(sType) == 1:  # все хорошо
             return True
+        elif len(sDem) == 2:
+            if len(sType) == 1:
+                return True
+            # elif fImp:
+            #    return False
+            elif fFFT and fNorm:
+                return False
+            else:
+                print('convert1')
+                dictEqn['graphDem']='3D'
+                dictEqn['graphType'] = 'norm'
+                self.convert23D(dictEqn['numbers'])
+                return True
+        elif len(sType) > 1:
+            if fFFT and fNorm:
+                return False
+            else:
+                return True
         else:
-            pass  # вставить функцию перерисовки графиков в 3d
-
+            print('convert2')
+            dictEqn['graphDem'] = '3D'
+            dictEqn['graphType'] = 'norm'
+            self.convert23D(dictEqn['number'])
+            return True
         
     def moveAxis(self, ax, d3d=False):
         if d3d:
@@ -131,6 +165,10 @@ class plotter():
             ax.spines['bottom'].set_visible(False)
             ax.spines['right'].set_visible(False)
             ax.spines['left'].set_visible(False)
+            # ax = self.fig.add_subplot(
+           #     self.maxxPos + 1, self.maxyPos + 1, ax.get_subplotspec().num1 + 1, projection = '3d')
+            # print(hasattr(ax, 'get_zlim'))
+            #return ax
         else:
             ax.grid(visible=True)
             ax.spines['left'].set_position('center')
@@ -143,27 +181,31 @@ class plotter():
             return
         listEqn = self.plotGrid[(currX, currY)]['numbers']
         ax = self.plotGrid[(currX, currY)]['ax']
-        if clear and type(ax) != int:
+        if clear:
             ax.clear()
             # ax.cla()
             if self.plotGrid[(currX, currY)]['graphDem'] == '3D':
                 self.moveAxis(ax, True)
-                ax.plot_surface()
+                # ax.plot_surface()
             else:
                 self.moveAxis(ax)
-                ax.plot()
-        # self.moveAxis(ax, self.plotGrid[(currX, currY)]['graphDam']=='3D')
+                # ax.plot()
+        # self.moveAxis(ax, self.plotGrid[(currX, currY)]['graphDem']=='3D')
         if listEqn == None:
             # строим пустой график с сеткой и сдвигаем оси в центр
-            ax.plot()
+            # ax.plot()
             self.moveAxis(ax)
         else:
-            if self.checkType(listEqn):
+            if self.checkType(self.plotGrid[(currX, currY)]):
+                # if self.plotGrid[(currX, currY)]['graphDem'] == '3D':
+                #    self.
                 if self.plotGrid[(currX, currY)]['graphType'] == 'fft' or self.plotGrid[(currX, currY)]['graphType'] == 'fft2':
                     for cEqn in listEqn:
                         self.list_eqn[cEqn].plotFFT(ax)
                 else:
                     for cEqn in listEqn:
+                        print('Plot Graph')
+                        print(self.list_eqn[cEqn].show)
                         self.list_eqn[cEqn].plotPLTGraph(ax)
         # self.fig.show()
         # self.plotGrid[(currX, currY)]['ax'] = ax
@@ -240,7 +282,8 @@ class plotter():
         else:
             self.plotGrid.update({(xpos, ypos): {
                                  'graphDem': eqn.graphDem, 'graphType': eqn.graphType, 'numbers': [eqnNum], 'ax': self.defineax(xpos, ypos)}})
-            self.moveAxis(self.defineax(xpos, ypos), eqn.graphDem == '3D')
+            self.moveAxis(self.defineax(xpos, ypos),
+                          eqn.graphDem == '3D')
         # разбираемся c fft
         # здесь мб ошибка с наложением графиков на fft
         if eqn.fftxpos != None and eqn.fftypos != None:
@@ -249,7 +292,7 @@ class plotter():
                               ]['numbers'].append(eqnNum)
             else:
                 if self.plotGrid[(xpos, ypos)]['graphDem'] == '3D':
-                    self.plotGrid.update({(xfftPos, yfftPos): {
+                    self.plotGrid.update({(eqn.fftxpos, eqn.fftypos): {
                                          'graphDem': '3D', 'graphType': 'fft2', 'numbers': [eqnNum], 'ax': self.defineax(eqn.fftxpos, eqn.fftypos)}})
                     self.moveAxis(self.defineax(
                         eqn.fftxpos, eqn.fftypos), True)
@@ -258,3 +301,49 @@ class plotter():
                         'graphDem': '2D', 'graphType': 'fft', 'numbers': [eqnNum], 'ax': self.defineax(eqn.fftxpos, eqn.fftypos)}})
                     self.moveAxis(self.defineax(
                         eqn.fftxpos, eqn.fftypos), False)
+    def convertAxes23D(self, ax):
+        ax.clear()
+        ax.set_axis_off()
+        ind = ax.get_subplotspec().num1
+        xpos, ypos = ind // (self.maxxPos + 1), ind % (self.maxyPos + 1)
+        if self.maxxPos == 0:
+            if self.maxyPos == 0:
+                self.ax = self.fig.add_subplot(
+                    self.maxxPos + 1, self.maxyPos + 1, ind + 1, projection='3d')
+                if (xpos, ypos) in self.plotGrid.keys():
+                    self.plotGrid[(xpos, ypos)]['ax'] = self.ax
+                    return self.ax
+            else:
+                self.ax[ypos] = self.fig.add_subplot(
+                    self.maxxPos + 1, self.maxyPos + 1, ind + 1, projection='3d')
+                if (xpos, ypos) in self.plotGrid.keys():
+                    self.plotGrid[(xpos, ypos)]['ax'] = self.ax[ypos]
+                    return self.ax[ypos]
+        elif self.maxyPos == 0:
+            self.ax[xpos] = self.fig.add_subplot(
+                self.maxxPos + 1, self.maxyPos + 1, ind+1, projection='3d')
+            if (xpos, ypos) in self.plotGrid.keys():
+                self.plotGrid[(xpos, ypos)]['ax'] = self.ax[xpos]
+                return self.ax[xpos]
+        else:
+            self.ax[xpos, ypos] = self.fig.add_subplot(
+                self.maxxPos + 1, self.maxyPos + 1, ind + 1, projection='3d')
+            if (xpos, ypos) in self.plotGrid.keys():
+                self.plotGrid[(xpos, ypos)]['ax'] = self.ax[xpos, ypos]
+                return self.ax[xpos, ypos]
+
+    def convert23D(self, numbers):
+        print('convert23')
+        for i in numbers:
+            eqn = self.list_eqn[i]
+            if eqn.graphDem != '3D':  # оптимизируем
+                if eqn.graphType != 'implicit':
+                    eqn.graphDem = '3D'
+                    eqn.graphType = 'norm'
+                    eqn.plotGraph()
+                else:
+                    eqn.show = False
+                    print(eqn.num, eqn.show)
+                    self.parent.showErrorEqn(
+                        eqn.num, 'Невозможно представить неявную функцию в 3х мерном пространстве')
+                    
