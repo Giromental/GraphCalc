@@ -82,12 +82,9 @@ class dataGraph():
             keys = list([i.name for i in keysObj])
             # self.ListSubs = list(sp.symbols(' '.join(self.ListSubs)))
             # проверяем правую часть
-            print('need subs')
-            print(self.ListSubs)
             for currAx in self.recognizeVarRight:
-                print(currAx, currAx in self.ListSubs) 
                 if currAx in self.ListSubs:  # надо ли заменять
-                    print(currAx)
+
                     if currAx in keys:
                         ind=keys.index(currAx)
                     else:
@@ -95,7 +92,6 @@ class dataGraph():
                     if len(self.parent.KnownAxis[keysObj[ind]]) == 1:
                         self.recognizeFuncRight = self.recognizeFuncRight.subs(
                             keysObj[ind], self.parent.list_eqn[list(self.parent.KnownAxis[keysObj[ind]])[0]].infoPart)
-                        print('Subs')
                     elif len(self.parent.KnownAxis[keysObj[ind]]) > 1:
                         self.parent.parent.showErrorEqn(
                             self.num, 'Переменная ' + str(currAx) + ' была определена несколько раз')
@@ -106,33 +102,7 @@ class dataGraph():
                         self.recognizeFuncLeft = self.recognizeFuncLeft.subs(
                             currAx, self.parent.list_eqn[self.parent.KnownAxis[currAx][0]].infoPart)
             # добавить проверки на количество осей и параметры
-        cVarR, cVarL = self.recognizeFuncRight.atoms(
-            sp.Symbol), self.recognizeFuncLeft.atoms(sp.Symbol)
-        cVar = set()
-        cVar.update(cVarR)
-        cVar.update(cVarL)
-          # сюда допилить проверку параметров
-        if len(cVar) == 3:
-            self.graphDem='3D'
-            if (len(cVarR) == 1 and len(cVarL) == 2) or (len(cVarR) == 2 and len(cVarL) == 1):
-                self.graphType='norm'
-            else:
-                self.graphType='implicit'
-        elif len(cVar) == 2 or len(cVar) == 1:
-            self.graphDem = '2D'
-            # if (len(cVarR) == 0 and len(cVarL) == 2) or (len(cVarR) == 2 and len(cVarL) == 0):
-            if len(cVarL) == 2 or len(cVarR) == 2:
-                self.graphType = 'implicit'
-            else:
-                self.graphType = 'norm'
-        elif len(cVar) == 0:
-            self.parent.parent.showErrorEqn(
-                self.num, 'В уравнении не обнаружено переменных')
-            return
-        else:
-            self.parent.parent.showErrorEqn(
-                self.num, 'В уравнении более 3х независимых переменных')
-            return
+        self.defineDem()
         self.plotGraph()
     def plotGraph(self):
         if self.recognizeFuncLeft == None or self.recognizeFuncRight == None:
@@ -176,7 +146,6 @@ class dataGraph():
             return 
         if not (self.fftshow):
             return
-        print(self.graphType)
         if self.graphDem == '2D':
             if self.graphType == 'norm':
                 if self.x == None or self.y == None:
@@ -193,17 +162,14 @@ class dataGraph():
         elif self.graphDem == '3D':
             if not (hasattr(ax, 'get_zlim')):
                 ax = self.parent.convertAxes23D(ax)
-                ind = ax.get_subplotspec().num1
-                xpos, ypos = ind // (self.parent.maxxPos +
-                                     1), ind % (self.parent.maxyPos + 1)
+                ind = ax.get_subplotspec()
+                xpos, ypos = ind.colspan[0], ind.rowspan[0]
                 if (xpos, ypos) in self.parent.plotGrid.keys():
-                    print('run plotCurrEqn', xpos, ypos)
                     self.parent.plotCurrEqn(xpos, ypos, True)
                     # return
             if self.graphType == 'norm':
                 if type(self.x) == type(None) or type(self.y) == type(None) or type(self.z) == type(None):
                     self.x, self.y, self.z = self.plotData[0].get_meshes()
-                print(hasattr(ax, 'get_zlim'))
                 ax.plot_surface(self.x, self.y, self.z, cmap=self.color)
             elif self.graphType == 'contour':
                 if type(self.x) == type(None) or type(self.y) == type(None) or type(self.z) == type(None):
@@ -244,11 +210,47 @@ class dataGraph():
  
         elif self.graphDem == '3D':
             if not (hasattr(ax, 'get_zlim')):
+                print('pred', ax)
                 ax = self.parent.convertAxes23D(ax)
+                print(ax)
                 ind = ax.get_subplotspec().num1
                 xpos, ypos = ind // (self.parent.maxxPos +
                                      1), ind % (self.parent.maxyPos + 1)
                 if (xpos, ypos) in self.parent.plotGrid.keys():
-                    print('run plotCurrEqn', xpos, ypos)
                     self.parent.plotCurrEqn(xpos, ypos, True)            
             pass  # я пока вообще хз как
+
+    def defineDem(self):
+        cVarR, cVarL = self.recognizeFuncRight.atoms(
+                sp.Symbol), self.recognizeFuncLeft.atoms(sp.Symbol)
+        cVar = set()
+        cVar.update(cVarR)
+        cVar.update(cVarL)
+        print(cVar)
+        if (self.xposition, self.yposition) in self.parent.plotGrid.keys():
+            Dem = self.parent.plotGrid[self.xposition,
+                self.yposition]['graphDem']
+        else:
+            Dem = None
+            # сюда допилить проверку параметров
+        if len(cVar) == 3 or Dem == '3D':
+            self.graphDem='3D'
+            if (len(cVarR) == 0 and len(cVarL) == 3) or (len(cVarR) == 3 and len(cVarL) == 0) or (len(cVarR) == 2 and len(cVarL) == 2):
+                self.graphType = 'implicit'
+            else:
+                self.graphType = 'norm'
+        elif len(cVar) == 2 or len(cVar) == 1:
+            self.graphDem = '2D'
+            # if (len(cVarR) == 0 and len(cVarL) == 2) or (len(cVarR) == 2 and len(cVarL) == 0):
+            if len(cVarL) == 2 or len(cVarR) == 2:
+                self.graphType = 'implicit'
+            else:
+                self.graphType = 'norm'
+        elif len(cVar) == 0:
+            self.parent.parent.showErrorEqn(
+                    self.num, 'В уравнении не обнаружено переменных')
+            return
+        else:
+            self.parent.parent.showErrorEqn(
+                    self.num, 'В уравнении более 3х независимых переменных')
+            return        

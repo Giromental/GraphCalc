@@ -25,7 +25,7 @@ class parser:
         self.list_const = ['i', 'pi', 'e']  # константы
         self.list_sign = ['+', '-', '*', '/', '**', '^']  # знаки
         self.list_brace = ['(', ')', '[', ']', '<', '>', '{', '}']  # скобки
-        self.dict_replace = {}
+        self.dict_replace = {'i': 'I'}
         self.str_sign = ""
         for i in range(len(self.list_sign)):  # скажем, что все знаки экранируются
             if len(self.list_sign[i]) > 1:
@@ -35,8 +35,8 @@ class parser:
         self.list_sign.sort(key=len, reverse=True)
         self.mega_regexp = r'(' + "|".join(self.list_Ffunc) + "|" + "|".join(self.list_func) + "|" + "|".join(self.list_const) + "|\\" + \
             "|\\".join(self.list_brace) + "|\\" + \
-            "|\\".join(self.list_sign) + \
-            '|[A-Za-z_]+[0-9]*[A-Za-z_]*|' + '|'.join(self.list_num) + ')'
+            "|\\".join(self.list_sign) + ')'
+        self.twice_reg = '([A-Za-z_]+[0-9]*[A-Za-z_]*|\d+[.,]\d*|\d+|.*)'
         self.strFfunc = r'(' + "|".join(self.list_Ffunc) + ')'
         self.strNum = r'(' + '|'.join(self.list_num) + ')'
     def parserEqn(self, graph, part):
@@ -51,7 +51,10 @@ class parser:
         list_param = []  # получакм из ввода
         # проверяем необходимость подстановок
         list_var=[]
-        operandList=re.split(self.mega_regexp, eqn)
+        splitList = re.split(self.mega_regexp, eqn)
+        operandList = []
+        for i in splitList:
+            operandList.extend(re.split(self.twice_reg, i))
         operandList = filter(None, operandList)
         operandList=list(filter((" ").__ne__, operandList))
         recognizeStr=''
@@ -127,6 +130,7 @@ class parser:
                     recognizeStr += operandList[cO]
         recognizeStr += ')' * cntDrwdedBrace  # закрываем все скобки
         recEqn = sp.sympify(recognizeStr)
+        print(recEqn)
         if part == 'right':
             graph.recognizeFuncRight = recEqn
             # graph.recognizeVarRight = list_eqn
@@ -481,7 +485,7 @@ class parser:
             sOut += ')' * (BraceOpen - 1)
         elif BraceOpen < 0:
             self.parent.parent.showErrorEqn(
-                num, 'Пропещены открывающие скобки х' + str(abs(BraceOpen)))
+                num, 'Пропущены открывающие скобки х' + str(abs(BraceOpen)))
             return None
         sOut = re.sub(r'\[|\<|\{', '(', sOut)
         sOut = re.sub(r'\]|\>|\}', ')', sOut)

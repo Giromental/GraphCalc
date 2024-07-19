@@ -66,9 +66,9 @@ class plotter():
             self.updateDict(eqnNum)
         if eqnNum not in self.plotGrid[(xpos, ypos)]['numbers']:
             self.plotGrid[(xpos, ypos)]['numbers'].append(eqnNum)
-        if xfftPos != None and yfftPos != None:
-            if eqnNum not in self.plotGrid[(xfftPos, yfftPos)]['numbers']:
-                self.plotGrid[(xfftPos, yfftPos)]['numbers'].append(eqnNum)
+        # if xfftPos != None and yfftPos != None:
+        #    if eqnNum not in self.plotGrid[(xfftPos, yfftPos)]['numbers']:
+        #        self.plotGrid[(xfftPos, yfftPos)]['numbers'].append(eqnNum)
         if new:
             self.list_eqn[eqnNum].plotPLTGraph(
                 self.plotGrid[(xpos, ypos)]['ax'])
@@ -142,7 +142,6 @@ class plotter():
             elif fFFT and fNorm:
                 return False
             else:
-                print('convert1')
                 dictEqn['graphDem']='3D'
                 dictEqn['graphType'] = 'norm'
                 self.convert23D(dictEqn['numbers'])
@@ -153,7 +152,6 @@ class plotter():
             else:
                 return True
         else:
-            print('convert2')
             dictEqn['graphDem'] = '3D'
             dictEqn['graphType'] = 'norm'
             self.convert23D(dictEqn['number'])
@@ -184,12 +182,8 @@ class plotter():
         if clear:
             ax.clear()
             # ax.cla()
-            if self.plotGrid[(currX, currY)]['graphDem'] == '3D':
-                self.moveAxis(ax, True)
-                # ax.plot_surface()
-            else:
-                self.moveAxis(ax)
-                # ax.plot()
+            self.moveAxis(
+                ax, self.plotGrid[(currX, currY)]['graphDem'] == '3D')
         # self.moveAxis(ax, self.plotGrid[(currX, currY)]['graphDem']=='3D')
         if listEqn == None:
             # строим пустой график с сеткой и сдвигаем оси в центр
@@ -204,8 +198,6 @@ class plotter():
                         self.list_eqn[cEqn].plotFFT(ax)
                 else:
                     for cEqn in listEqn:
-                        print('Plot Graph')
-                        print(self.list_eqn[cEqn].show)
                         self.list_eqn[cEqn].plotPLTGraph(ax)
         # self.fig.show()
         # self.plotGrid[(currX, currY)]['ax'] = ax
@@ -304,46 +296,48 @@ class plotter():
     def convertAxes23D(self, ax):
         ax.clear()
         ax.set_axis_off()
-        ind = ax.get_subplotspec().num1
-        xpos, ypos = ind // (self.maxxPos + 1), ind % (self.maxyPos + 1)
+        gridSpec = ax.get_subplotspec()
+        xpos, ypos = gridSpec.colspan[0], gridSpec.rowspan[0]
+        ind = ypos * self.maxxPos + xpos
+        print(xpos, ypos, ind)
         if self.maxxPos == 0:
             if self.maxyPos == 0:
                 self.ax = self.fig.add_subplot(
                     self.maxxPos + 1, self.maxyPos + 1, ind + 1, projection='3d')
                 if (xpos, ypos) in self.plotGrid.keys():
                     self.plotGrid[(xpos, ypos)]['ax'] = self.ax
-                    return self.ax
+                return self.ax
             else:
                 self.ax[ypos] = self.fig.add_subplot(
                     self.maxxPos + 1, self.maxyPos + 1, ind + 1, projection='3d')
                 if (xpos, ypos) in self.plotGrid.keys():
                     self.plotGrid[(xpos, ypos)]['ax'] = self.ax[ypos]
-                    return self.ax[ypos]
+                return self.ax[ypos]
         elif self.maxyPos == 0:
             self.ax[xpos] = self.fig.add_subplot(
                 self.maxxPos + 1, self.maxyPos + 1, ind+1, projection='3d')
             if (xpos, ypos) in self.plotGrid.keys():
                 self.plotGrid[(xpos, ypos)]['ax'] = self.ax[xpos]
-                return self.ax[xpos]
+            return self.ax[xpos]
         else:
             self.ax[xpos, ypos] = self.fig.add_subplot(
                 self.maxxPos + 1, self.maxyPos + 1, ind + 1, projection='3d')
             if (xpos, ypos) in self.plotGrid.keys():
                 self.plotGrid[(xpos, ypos)]['ax'] = self.ax[xpos, ypos]
-                return self.ax[xpos, ypos]
+            return self.ax[xpos, ypos]
 
     def convert23D(self, numbers):
-        print('convert23')
+
         for i in numbers:
             eqn = self.list_eqn[i]
             if eqn.graphDem != '3D':  # оптимизируем
+    
                 if eqn.graphType != 'implicit':
                     eqn.graphDem = '3D'
                     eqn.graphType = 'norm'
                     eqn.plotGraph()
                 else:
                     eqn.show = False
-                    print(eqn.num, eqn.show)
                     self.parent.showErrorEqn(
                         eqn.num, 'Невозможно представить неявную функцию в 3х мерном пространстве')
-                    
+
