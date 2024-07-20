@@ -10,13 +10,16 @@ class parser:
 
     def initConstList(self):  # возможно, потом убрать в конфиги
         # определяем известные функции и символы
-        self.list_func = ['sin', 'cos', 'tg', 'ctg', 'sec', 'cosec', 'sinc',  # тригономатрические функции
+        self.list_func = ['sin', 'cos', 'tg', 'ctg', 'sec', 'cosec', 'sinc', 'tan', 'cot', 'csc',  # тригономатрические функции
                      # обратные тригонометрические функции
                      'arcsin', 'arccos', 'arctg', 'arcctg', 'arcsec', 'arccosec',
+                     'asin', 'acos', 'atan', 'acot', 'assec', 'acsc',
                      'atan2'  # atan2(x, y) = -ilog((x+iy)/sqrt(x**2+y**2))
                      'sh', 'ch', 'th', 'cth', 'sch', 'csch',  # гиперболические функции
+                     'sinh', 'cosh', 'tanh', 'coth', 'sech',
                      # обратные гиперболические функции
                      'arsh', 'arch', 'arth', 'arcth', 'arsch', 'arcsech', 'arcsech',
+                     'asinh', 'acosh', 'atanh', 'acoth', 'asech', 'acsch',
                      're', 'im', 'abs', 'sign', 'exp', 'pow'  # некоторые мат. функции
                      'ln', 'lg', 'sqrt', 'root']
         # функции-спонсоры выгорания программиста
@@ -25,7 +28,11 @@ class parser:
         self.list_const = ['i', 'pi', 'e']  # константы
         self.list_sign = ['+', '-', '*', '/', '**', '^']  # знаки
         self.list_brace = ['(', ')', '[', ']', '<', '>', '{', '}']  # скобки
-        self.dict_replace = {'i': 'I'}
+        self.dict_replace = {'i': 'I', 'tg': 'tan',
+            'ctg': 'cot', 'cosec': 'csc', 'arcsin': 'asin', 'arccos': 'acos', 'arctg': 'atan', 'arcctg': 'acot', 'arcsec': 'assec', 'arccosec': 'acsc',
+            'sh': 'sinh', 'ch': 'cosh', 'th': 'tanh', 'cth': 'coth', 'sch': 'sech', 'csch'
+            'arsh': 'asinh', 'arch': 'acosh', 'arth': 'atanh', 'arcth': 'acoth', 'arsch': 'asech', 'arcsech': 'acsch'}
+        
         self.str_sign = ""
         for i in range(len(self.list_sign)):  # скажем, что все знаки экранируются
             if len(self.list_sign[i]) > 1:
@@ -56,7 +63,10 @@ class parser:
         for i in splitList:
             operandList.extend(re.split(self.twice_reg, i))
         operandList = filter(None, operandList)
-        operandList=list(filter((" ").__ne__, operandList))
+        operandList = list(filter((" ").__ne__, operandList))
+        for i in range(len(operandList)):
+            if operandList[i] in self.dict_replace.keys():
+                operandList[i] = self.dict_replace[operandList[i]]
         recognizeStr=''
         cntDrwdedBrace=0
         skipIter=False

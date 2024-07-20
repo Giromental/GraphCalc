@@ -218,7 +218,17 @@ class dataGraph():
                                      1), ind % (self.parent.maxyPos + 1)
                 if (xpos, ypos) in self.parent.plotGrid.keys():
                     self.parent.plotCurrEqn(xpos, ypos, True)            
-            pass  # я пока вообще хз как
+            data_3d = np.stack((self.x, self.y, self.z), axis=-1)
+            # Применяем FFT
+            fft_data = np.fft.fftn(data_3d)
+            # ax.plot_surface(*fft_result)
+            normalized_fft_data = np.abs(fft_data) / data_3d.size
+            # ax.scatter(normalized_fft_data.real, normalized_fft_data.imag, c=normalized_fft_data.real)
+            ax.plot_surface(np.abs(normalized_fft_data[:, :, 0]), np.imag(normalized_fft_data[:, :, 1]), np.real(normalized_fft_data[:, :, 2]))
+            # plt.show()
+            ax.set_xlabel('Real Part')
+            ax.set_ylabel('Imaginary Part')
+            ax.set_zlabel('Intensity')            
 
     def defineDem(self):
         cVarR, cVarL = self.recognizeFuncRight.atoms(
