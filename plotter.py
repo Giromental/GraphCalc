@@ -40,7 +40,7 @@ class plotter():
             obj = dataGraph(name, number, self.parseEqn, self)
             self.list_eqn[number] = obj
             new = True
-        self.list_eqn[number].updateFunc(eqn)
+        self.list_eqn[number].updateFunc(eqn, new)
         self.add2plot(number,
                       self.list_eqn[number].xposition, self.list_eqn[number].yposition, new)
 

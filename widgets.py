@@ -487,12 +487,15 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         showEqn.setObjectName(str("IconEqn" + str(self.countEqn)))
         self.countEqn += 1
 
-    def linkHovered(self):
-        print('Mouse hovered over the link')
     @pyqtSlot()
     def myfunc(self):
         name = self.sender().objectName()
         newEquation = self.sender().text()
+        Button = self.eqn_list.findChildren(
+            QPushButton, 'IconEqn' + name[3:])[0]
+        if not (Button.isEnabled()):
+            Button.setEnabled(True)
+            Button.click()
         self.PlotGraph.addNewEqn(newEquation, name)
         self.ReDrawCanvas()
         # переадресация на парсер

@@ -57,7 +57,9 @@ class dataGraph():
         self.expressedVar = None
 
         
-    def updateFunc(self, eqn):
+    def updateFunc(self, eqn, new):
+        if not (new):
+            self.initParam()
         self.parseEqn.parseParam(self, eqn)
         if self.leftPart == '' or self.rightPart == '':
             return  # ошибка
@@ -203,11 +205,15 @@ class dataGraph():
             # дописать возможность изменения представления числа
             if 'real' in self.parent.complexPart:
                 ax.plot(self.SFreq[1:-1], self.SigFFT.real[1:-1])
+                ax.set_xlabel('Real Part')
             if 'imag' in self.parent.complexPart:
                 ax.plot(self.SFreq[1:-1], self.SigFFT.imag[1:-1])
+                ax.set_xlabel('Imag Part')
             if 'abs' in self.parent.complexPart:
                 ax.plot(self.SFreq[1:-1], np.abs(self.SigFFT[1:-1]))
- 
+                ax.set_xlabel('Abs Part')
+            ax.set_ylabel('Magnitude')
+
         elif self.graphDem == '3D':
             if not (hasattr(ax, 'get_zlim')):
                 print('pred', ax)
@@ -224,7 +230,8 @@ class dataGraph():
             # ax.plot_surface(*fft_result)
             normalized_fft_data = np.abs(fft_data) / data_3d.size
             # ax.scatter(normalized_fft_data.real, normalized_fft_data.imag, c=normalized_fft_data.real)
-            ax.plot_surface(np.abs(normalized_fft_data[:, :, 0]), np.imag(normalized_fft_data[:, :, 1]), np.real(normalized_fft_data[:, :, 2]))
+            ax.plot_surface(np.abs(normalized_fft_data[:, :, 0]), np.imag(
+                normalized_fft_data[:, :, 1]), np.real(normalized_fft_data[:, :, 2]))
             # plt.show()
             ax.set_xlabel('Real Part')
             ax.set_ylabel('Imaginary Part')
