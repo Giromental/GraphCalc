@@ -31,6 +31,11 @@ class plotter():
     def addNewEqn(self, eqn, name):
         number = int(name[3:])
         new = False
+        # проверка на пустое
+        if eqn.strip() == '':
+            if number <= self.cntEqn and self.list_eqn[number] != None:
+                self.removeEqnInPlot(number)
+            return
         # проверяем новизну графика
         if number > self.cntEqn:
             self.list_eqn.extend([None] * (number - self.cntEqn))
@@ -54,36 +59,41 @@ class plotter():
                 self.maxyPos = max(yfftPos, ypos, self.maxyPos)
                 self.maxxPos = max(xfftPos, xpos, self.maxxPos)
                 self.resizeSubPlot()
-                self.updateDict(eqnNum)
+                # self.updateDict(eqnNum)
         else:
             if xpos > self.maxxPos or ypos > self.maxyPos:
                 self.maxyPos = max(ypos, self.maxyPos)
                 self.maxxPos = max(xpos, self.maxxPos)
                 self.resizeSubPlot()
-                self.updateDict(eqnNum)
+                # self.updateDict(eqnNum)
 # определяем наличие уравнения в списке
-        if (xpos, ypos) not in self.plotGrid.keys() or (xfftPos, yfftPos) not in self.plotGrid.keys():
-            self.updateDict(eqnNum)
-        if eqnNum not in self.plotGrid[(xpos, ypos)]['numbers']:
-            self.plotGrid[(xpos, ypos)]['numbers'].append(eqnNum)
+        # if (xpos, ypos) not in self.plotGrid.keys() or (xfftPos, yfftPos) not in self.plotGrid.keys():
+        #    self.updateDict(eqnNum)
+        # if eqnNum not in self.plotGrid[(xpos, ypos)]['numbers']:
+        #    self.plotGrid[(xpos, ypos)]['numbers'].append(eqnNum)
         # if xfftPos != None and yfftPos != None:
         #    if eqnNum not in self.plotGrid[(xfftPos, yfftPos)]['numbers']:
         #        self.plotGrid[(xfftPos, yfftPos)]['numbers'].append(eqnNum)
+        self.updateDict(eqnNum)
         if new:
-            self.list_eqn[eqnNum].plotPLTGraph(
-                self.plotGrid[(xpos, ypos)]['ax'])
+            if self.list_eqn[eqnNum].graphDem != self.plotGrid[(xpos, ypos)]:
+                if self.checkNewEqn(eqnNum, False):  # все мб быть плохо
+                    self.list_eqn[eqnNum].plotPLTGraph(
+                        self.plotGrid[(xpos, ypos)]['ax'])
             if xfftPos != None and yfftPos != None:
-                self.list_eqn[eqnNum].plotFFT(
-                    self.plotGrid[(xfftPos, yfftPos)]['ax'])
+                if self.checkNewEqn(eqnNum, True):
+                    self.list_eqn[eqnNum].plotFFT(
+                        self.plotGrid[(xfftPos, yfftPos)]['ax'])
         else:
             # перестраиваем все графики в это окне
             self.plotCurrEqn(xpos, ypos, True)
             self.plotCurrEqn(xfftPos, yfftPos, True)
-        var=self.list_eqn[eqnNum].expressedVar
-        if var in self.KnownAxis.keys():
-            self.KnownAxis[var].add(eqnNum)
-        else:
-            self.KnownAxis.update({var: {eqnNum}})
+        var = self.list_eqn[eqnNum].expressedVar
+        if var != None:
+            if var in self.KnownAxis.keys():
+                self.KnownAxis[var].add(eqnNum)
+            else:
+                self.KnownAxis.update({var: {eqnNum}})
         # self.fig.close()
         # self.fig.show()
         # self.canvas = FigureCanvas(self.fig)
@@ -126,13 +136,17 @@ class plotter():
             lType.append(self.list_eqn[i].graphType)
             lDem.append(self.list_eqn[i].graphDem)
         sType = set(lType)
-        sDem = set(lType)
+        sDem = set(lDem)
         fNorm = any(
             x in self.listType2d or x in self.listType3d for x in sType)
         # fImp = 'implicit' in sType
         fFFT = 'fft' in sType or 'fft2' in sType
         fImp = 'implicit' in sType
         if len(sDem) == 1 and len(sType) == 1:  # все хорошо
+            # if list(sDem)[0] != dictEqn['graphDem']:
+            dictEqn['graphDem'] = list(sDem)[0]
+           # if list(sType)[0] != dictEqn['graphType']:
+            #    dictEqn['graphType'] = list(sType)[0]
             return True
         elif len(sDem) == 2:
             if len(sType) == 1:
@@ -154,7 +168,7 @@ class plotter():
         else:
             dictEqn['graphDem'] = '3D'
             dictEqn['graphType'] = 'norm'
-            self.convert23D(dictEqn['number'])
+            self.convert23D(dictEqn['numbers'])
             return True
         
     def moveAxis(self, ax, d3d=False):
@@ -163,10 +177,7 @@ class plotter():
             ax.spines['bottom'].set_visible(False)
             ax.spines['right'].set_visible(False)
             ax.spines['left'].set_visible(False)
-            # ax = self.fig.add_subplot(
-           #     self.maxxPos + 1, self.maxyPos + 1, ax.get_subplotspec().num1 + 1, projection = '3d')
-            # print(hasattr(ax, 'get_zlim'))
-            #return ax
+
         else:
             ax.grid(visible=True)
             ax.spines['left'].set_position('center')
@@ -176,6 +187,10 @@ class plotter():
 
     def plotCurrEqn(self, currX, currY, clear=False):
         if (currX, currY) not in self.plotGrid.keys():
+            ax = self.defineax(currX, currY)
+            if clear:
+                ax.clear()            
+            self.moveAxis(ax)
             return
         listEqn = self.plotGrid[(currX, currY)]['numbers']
         ax = self.plotGrid[(currX, currY)]['ax']
@@ -185,7 +200,7 @@ class plotter():
             self.moveAxis(
                 ax, self.plotGrid[(currX, currY)]['graphDem'] == '3D')
         # self.moveAxis(ax, self.plotGrid[(currX, currY)]['graphDem']=='3D')
-        if listEqn == None:
+        if listEqn == None or len(listEqn) == 0:
             # строим пустой график с сеткой и сдвигаем оси в центр
             # ax.plot()
             self.moveAxis(ax)
@@ -293,13 +308,13 @@ class plotter():
                         'graphDem': '2D', 'graphType': 'fft', 'numbers': [eqnNum], 'ax': self.defineax(eqn.fftxpos, eqn.fftypos)}})
                     self.moveAxis(self.defineax(
                         eqn.fftxpos, eqn.fftypos), False)
+                    
     def convertAxes23D(self, ax):
         ax.clear()
         ax.set_axis_off()
         gridSpec = ax.get_subplotspec()
         xpos, ypos = gridSpec.colspan[0], gridSpec.rowspan[0]
         ind = ypos * self.maxxPos + xpos
-        print(xpos, ypos, ind)
         if self.maxxPos == 0:
             if self.maxyPos == 0:
                 self.ax = self.fig.add_subplot(
@@ -341,3 +356,74 @@ class plotter():
                     self.parent.showErrorEqn(
                         eqn.num, 'Невозможно представить неявную функцию в 3х мерном пространстве')
 
+    def removeEqnInPlot(self, num):
+        ''' удаляет максимум информации об обекте graph, при его удалении '''
+        var = self.list_eqn[num].expressedVar
+        xpos, ypos = self.list_eqn[num].xposition, self.list_eqn[num].yposition
+        xfftpos, yfftpos = self.list_eqn[num].fftxpos, self.list_eqn[num].fftypos
+        for i in self.plotGrid.keys():
+            if num in self.plotGrid[i]['numbers']:
+                self.plotGrid[i]['numbers'].remove(num)
+        if len(self.KnownAxis.keys()) == 0:
+            for i in self.KnownAxis.keys():
+                if i.name == var.name:
+                    if len(self.KnownAxis[i]) < 2:
+                        del self.KnownAxis[i]
+                    else:
+                        self.KnownAxis[i].remove(num)
+        self.list_eqn[num] = None
+        self.plotCurrEqn(xpos, ypos, True)
+        self.plotCurrEqn(xfftpos, yfftpos, True)
+
+    def checkNeedResize(self):
+        maxx, maxy = 0, 0
+        if len(self.plotGrid.keys()) != 0:
+            for i in self.plotGrid.keys():
+                if len(self.plotGrid[i]['numbers']) == 0:
+                    del self.plotGrid[i]  # чистим мусор
+                else:
+                    maxx, maxy = max(maxx, i[0]), max(maxy, i[1])
+            if maxx != self.maxxPos or maxy != self.maxyPos:
+                self.maxxPos, self.maxyPos = maxx, maxy
+                self.resizeSubPlot()
+        else:
+            self.maxxPos, self.maxyPos = 0, 0
+            self.resizeSubPlot()
+
+    def checkNewEqn(self, num, fft):
+        eqn = self.list_eqn[num]
+        if not (fft):
+            xpos, ypos = eqn.xposition, eqn.yposition
+            if eqn.graphDem == self.plotGrid[(xpos, ypos)]['graphDem']:
+                return True
+            else:
+                if eqn.graphType == 'implicit':
+                    self.parent.showErrorEqn(
+                        eqn.num, 'Невозможно представить неявную функцию в 3х мерном пространстве')
+                    return False
+                elif eqn.graphDem == '2D':
+                    self.parent.showErrorEqn(
+                        eqn.num, 'Невозможно преобразовать 3х мерный график в 2х')
+                else:
+                    eqn.graphDem = '3D'
+                    if self.plotGrid[(xpos, ypos)]['graphDem'] == '2D':
+                        self.plotGrid[(xpos, ypos)]['graphDem'] == '3D'
+                        self.plotGrid[(xpos, ypos)]['graphType'] == 'norm'
+                        self.convert23D(self.plotGrid[(xpos, ypos)]['numbers'])
+                        self.plotCurrEqn(xpos, ypos, True)
+                        return False
+                    else:
+                        eqn.graphDem = '3D'
+                        return True
+        else:
+            xpos, ypos = eqn.fftxpos, eqn.fftypos
+            if eqn.graphDem == self.plotGrid[(xpos, ypos)]['graphDem']:
+                return True
+            else:
+                if self.plotGrid[(xpos, ypos)]['graphDem'] == '2D':
+                    self.plotGrid[(xpos, ypos)]['graphDem'] == '3D'
+                    self.plotGrid[(xpos, ypos)]['graphType'] == 'fft2'
+                    self.plotCurrEqn(xpos, ypos, True)
+                    return False
+                else:
+                    return True

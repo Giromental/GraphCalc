@@ -139,8 +139,12 @@ class parser:
                 else:
                     recognizeStr += operandList[cO]
         recognizeStr += ')' * cntDrwdedBrace  # закрываем все скобки
-        recEqn = sp.sympify(recognizeStr)
-        print(recEqn)
+        try:
+            recEqn = sp.sympify(recognizeStr)
+        except:
+            self.parent.parent.showErrorEqn(
+                number, 'Уравнение содержит ошибку')
+            return
         if part == 'right':
             graph.recognizeFuncRight = recEqn
             # graph.recognizeVarRight = list_eqn
@@ -203,7 +207,7 @@ class parser:
                     '''
                     # проверка цвета
                     if colorstr in plt.colormaps():
-                        graph.color == colorstr
+                        graph.cmap = colorstr  # для 3d
                     else:
                         try:
                             rgba_color = to_rgba(colorstr)
@@ -307,6 +311,7 @@ class parser:
                     try:
                         graph.origypos, graph.origxpos = int(
                             tmp[0]) - 1, int(tmp[1]) - 1
+                        self.parent.defineFFTPos(graph)
                     except:
                         self.parent.parent.showErrorEqn(
                             graph.num, 'Неверный аргумент параметра graphpos')
@@ -361,15 +366,15 @@ class parser:
                 return
         if iGDem != -1:
             if eqn.find('gdem', iGDem + 2) == -1:
-                if leqn >= 6 + iGDem:
+                if leqn >= 5 + iGDem:
                     imin = min(imin, iGDem)
-                    tmp = self.extractWord(eqn[iGDem + 6:])
+                    tmp = self.extractWord(eqn[iGDem + 5:])
                     try:
                         tmp = int(tmp)
                         if tmp == 2:
-                            graph.graphDem = '2D'
+                            graph.usergraphDem = '2D'
                         elif tmp == 3:
-                            graph.graphDem == '3D'
+                            graph.usergraphDem = '3D'
                         else:
                             self.parent.parent.showErrorEqn(
                                 graph.num, 'Аргумент параметра gdem должен быть целым числом от 2 до 3')
@@ -384,9 +389,9 @@ class parser:
                 return
         if iGType != -1:
             if eqn.find('type', iGType + 2) == -1:
-                if leqn >= 6 + iGtype:
+                if leqn >= 5 + iGType:
                     imin = min(imin, iGType)
-                    tmp = self.extractWord(eqn[iGType + 6:])
+                    tmp = self.extractWord(eqn[iGType + 5:])
                     if graph.graphDem == '2D' and tmp in graph.parent.listType2d:
                             graph.graphDem = tmp
                     elif graph.graphDem == '2D' and tmp in graph.parent.listType3d:
@@ -453,7 +458,7 @@ class parser:
                 graph.num, 'В уравнении должно быть =')
             return            
         if iSum != -1:
-            SSum=self.checkBraceNext(eqn[iSum + 4:], number)
+            SSum = self.checkBraceNext(eqn[iSum + 4:], graph.num)
             lSum=re.split(',|\.|;', SSum)
             eqn=eqn.replace('sum(' + SSum + ')', '+'.join(lSum))
             list_subs.extend(lSum)

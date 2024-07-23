@@ -22,6 +22,7 @@ class dataGraph():
         self.symbolsType = type(sp.symbols(']'))
         self.show = True
         self.color = None  # use как cmap lkz 3d surface
+        self.cmap = None
         self.leftPart = ''
         self.rightPart = ''
         self.xposition = 0  # координаты в сетке
@@ -50,6 +51,7 @@ class dataGraph():
         self.fftxpos = None
         self.fftypos = None
         self.userDefineFFT = False
+        self.usergraphDem = None
         self.fftshow = True
         # данные для суммы
         self.infoPart = None
@@ -58,9 +60,37 @@ class dataGraph():
 
         
     def updateFunc(self, eqn, new):
+        xp, yp = self.xposition, self.yposition
+        xfft, yfft = self.fftxpos, self.fftypos
+        self.varOld = self.expressedVar
         if not (new):
             self.initParam()
         self.parseEqn.parseParam(self, eqn)
+        checkedResize = False
+        if xp != None and yp != None:
+            if xp != self.xposition or yp != self.yposition:
+                if (xp, yp) in self.parent.plotGrid.keys():
+                    if len(self.parent.plotGrid[(xp, yp)]['numbers']) == 1:
+                        del self.parent.plotGrid[(xp, yp)]
+                        if xp == self.parent.maxxPos or yp == self.parent.maxyPos:
+                            checkedResize = True
+                    else:
+                        self.parent.plotGrid[(xp, yp)]['numbers'].remove(
+                            self.num)
+                    self.parent.plotCurrEqn(xp, yp, True)
+        if xfft != None and yfft != None:
+            if xfft != self.fftxpos or yfft != self.fftypos:
+                if (xfft, yfft) in self.parent.plotGrid.keys():
+                    if len(self.parent.plotGrid[(xfft, yfft)]['numbers']) == 1:
+                        del self.parent.plotGrid[(xfft, yfft)]
+                        if xfft == self.parent.maxxPos or yfft == self.parent.maxyPos:
+                            checkedResize = True
+                    else:
+                        self.parent.plotGrid[(xfft, yfft)
+                                             ]['numbers'].remove(self.num)
+                    self.parent.plotCurrEqn(xfft, yfft, True)
+        if checkedResize:
+            self.parent.checkNeedResize()
         if self.leftPart == '' or self.rightPart == '':
             return  # ошибка
         '''
@@ -77,6 +107,8 @@ class dataGraph():
         '''
         self.parseEqn.parserEqn(self, 'left')
         self.parseEqn.parserEqn(self, 'right')
+        if self.recognizeFuncLeft == None or self.recognizeFuncRight == None:
+            return
         
         if self.NeedSubs:
             # self.ListSubs = self.list_param['ListSubs']
@@ -110,7 +142,7 @@ class dataGraph():
         if self.recognizeFuncLeft == None or self.recognizeFuncRight == None:
             return
         if type(self.recognizeFuncLeft) == self.symbolsType:
-            plotPart=self.recognizeFuncRight
+            plotPart = self.recognizeFuncRight
             self.infoPart=self.recognizeFuncRight
             self.expressedVar=self.recognizeFuncLeft
         elif type(self.recognizeFuncRight) == self.symbolsType:
@@ -120,6 +152,10 @@ class dataGraph():
         elif self.graphType != 'implicit':
             self.graphType = 'implicit'
             self.infoPart = 0
+        if self.expressedVar != None and self.varOld != None:
+            if self.expressedVar.name != self.varOld.name:
+                if self.varOld in self.parent.KnownAxis:
+                    del self.parent.KnownAxis[self.varOld]
         match self.graphDem:
             case '2D':
                 if self.graphType == 'implicit':
@@ -172,15 +208,27 @@ class dataGraph():
             if self.graphType == 'norm':
                 if type(self.x) == type(None) or type(self.y) == type(None) or type(self.z) == type(None):
                     self.x, self.y, self.z = self.plotData[0].get_meshes()
-                ax.plot_surface(self.x, self.y, self.z, cmap=self.color)
+                if self.cmap == None:
+                    ax.plot_surface(self.x, self.y, self.z)
+                else:
+                    ax.plot_surface(self.x, self.y, self.z, cmap=self.cmap)
+                    plt.show()
             elif self.graphType == 'contour':
                 if type(self.x) == type(None) or type(self.y) == type(None) or type(self.z) == type(None):
                     self.x, self.y, self.z = self.plotData[0].get_meshes()
-                ax.contour(self.x, self.y, self.z, cmap=self.color)
+                if self.cmap == None:
+                    ax.contour(self.x, self.y, self.z)
+                else:
+                    ax.contour(self.x, self.y, self.z, cmap=self.cmap)
+                #ax.contour(self.x, self.y, self.z, cmap=self.color)
             elif self.graphType == 'wireframe':
                 if type(self.x) == type(None) or type(self.y) == type(None) or type(self.z) == type(None):
                     self.x, self.y, self.z = self.plotData[0].get_meshes()
-                ax.plot_wireframe(self.x, self.y, self.z, color=self.color,
+                if self.color != None:
+                    ax.plot_wireframe(self.x, self.y, self.z, color=self.cmap,
+                                  rstride=self.stride[0], cstride=self.stride[1])
+                else:
+                    ax.plot_wireframe(self.x, self.y, self.z,
                                   rstride=self.stride[0], cstride=self.stride[1])
 
     def plotFFT(self, ax):
@@ -216,9 +264,7 @@ class dataGraph():
 
         elif self.graphDem == '3D':
             if not (hasattr(ax, 'get_zlim')):
-                print('pred', ax)
                 ax = self.parent.convertAxes23D(ax)
-                print(ax)
                 ind = ax.get_subplotspec().num1
                 xpos, ypos = ind // (self.parent.maxxPos +
                                      1), ind % (self.parent.maxyPos + 1)
@@ -230,8 +276,8 @@ class dataGraph():
             # ax.plot_surface(*fft_result)
             normalized_fft_data = np.abs(fft_data) / data_3d.size
             # ax.scatter(normalized_fft_data.real, normalized_fft_data.imag, c=normalized_fft_data.real)
-            ax.plot_surface(np.abs(normalized_fft_data[:, :, 0]), np.imag(
-                normalized_fft_data[:, :, 1]), np.real(normalized_fft_data[:, :, 2]))
+            ax.plot_surface(np.real(normalized_fft_data[:, :, 0]), np.imag(
+                normalized_fft_data[:, :, 1]), np.abs(normalized_fft_data[:, :, 2]))
             # plt.show()
             ax.set_xlabel('Real Part')
             ax.set_ylabel('Imaginary Part')
@@ -243,7 +289,6 @@ class dataGraph():
         cVar = set()
         cVar.update(cVarR)
         cVar.update(cVarL)
-        print(cVar)
         if (self.xposition, self.yposition) in self.parent.plotGrid.keys():
             Dem = self.parent.plotGrid[self.xposition,
                 self.yposition]['graphDem']
@@ -270,4 +315,18 @@ class dataGraph():
         else:
             self.parent.parent.showErrorEqn(
                     self.num, 'В уравнении более 3х независимых переменных')
-            return        
+            return
+        if self.usergraphDem != None and self.usergraphDem != self.graphDem:
+            if self.graphDem == '2D':
+                if self.graphType == 'implicit':
+                    self.parent.parent.showErrorEqn(
+                        self.num, 'Невозможно преобразовать неявное уравнение в 3D')
+                    return
+                self.graphDem = '3D'
+                if (self.xposition, self.yposition) in self.parent.plotGrid.keys():
+                    self.parent.plotCurrEqn(
+                        self.xposition, self.yposition, True)
+            else:
+                self.parent.parent.showErrorEqn(
+                    self.num, 'Невозможно преобразовать 3D в 2D')
+                return
