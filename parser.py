@@ -4,11 +4,13 @@ from matplotlib.colors import to_rgba
 import matplotlib.pyplot as plt
 
 class parser:
+    ''' объект отвечает за распознование того, что написано в строке уравнения и преобразование ввода в корректный вид '''
     def __init__(self, parent):
         self.initConstList()
         self.parent = parent
 
     def initConstList(self):  # возможно, потом убрать в конфиги
+        ''' составляем строки для regex и использования их при парсинге уравнения '''
         # определяем известные функции и символы
         self.list_func = ['sin', 'cos', 'tg', 'ctg', 'sec', 'cosec', 'sinc', 'tan', 'cot', 'csc',  # тригономатрические функции
                      # обратные тригонометрические функции
@@ -47,6 +49,9 @@ class parser:
         self.strFfunc = r'(' + "|".join(self.list_Ffunc) + ')'
         self.strNum = r'(' + '|'.join(self.list_num) + ')'
     def parserEqn(self, graph, part):
+        ''' преобразует входную строку в нормальный вид
+        Пример:
+        cosxsinx + cosecx --> cos(x)*sin(x)+csc(x)'''
         # проверяем скобки
         number = graph.num
         if part == 'left':
@@ -155,6 +160,7 @@ class parser:
             graph.recognizeVarLeft = list_var
         # return recEqn, list_var
     def parseParam(self, graph, eqn):
+        ''' извлекает из строки уравнения дополнительные параметры построения и удаляет их из строки'''
         # dictParamEqn = self.dictParam.copy()
         eqn.lower()
         list_subs = []  # перечень всего, что нужно подставить
@@ -506,6 +512,7 @@ class parser:
         sOut = re.sub(r'\]|\>|\}', ')', sOut)
         return sOut
     def extractWord(self, s):
+        ''' извлекает первое слово '''
         itmp = 0
         sumstr = ''
         s = s.strip()
@@ -514,6 +521,7 @@ class parser:
             itmp += 1
         return sumstr
     def isNum(self, eqn):
+        ''' проверяет ввод на число '''
         eqn = eqn.replace(',', '.')
         try:
             t = float(eqn)

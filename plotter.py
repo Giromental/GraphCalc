@@ -6,8 +6,9 @@ from matplotlib.pyplot import subplot, subplots, subplots_adjust
 
 
 class plotter():
-    
+    ''' объект отвечает за все манипуляции с графиком - построить, удалить, добавить подграф итд'''
     def __init__(self, parent):
+        ''' создаем объект '''
         # super().__init__(None)
         self.parent = parent
         self.parseEqn = parser(self)
@@ -26,9 +27,10 @@ class plotter():
         self.neededReDrow = False
         self.KnownAxis = dict()
         self.listType2d = ['norm', 'implicit']
-        self.listType3d =['norm', 'contour', 'wireframe', 'implicit']        
-        
+        self.listType3d = ['norm', 'contour', 'wireframe', 'implicit']
+
     def addNewEqn(self, eqn, name):
+        ''' добавить новое уравнение '''
         number = int(name[3:])
         new = False
         # проверка на пустое
@@ -50,6 +52,7 @@ class plotter():
                       self.list_eqn[number].xposition, self.list_eqn[number].yposition, new)
 
     def add2plot(self, eqnNum, xpos, ypos, new):
+        ''' добавляем уравнение на график '''
         self.defineFFTPos(self.list_eqn[eqnNum])
         # определяем надобность изменения размеров
         xpos, ypos = self.list_eqn[eqnNum].xposition, self.list_eqn[eqnNum].yposition
@@ -100,6 +103,7 @@ class plotter():
         # self.canvas.draw()
         # self.fig.show()
     def defineax(self, xpos, ypos):
+        ''' определяем оси '''
         if self.maxxPos == 0:
             if self.maxyPos == 0:
                 return self.ax
@@ -111,6 +115,7 @@ class plotter():
             return self.ax[xpos, ypos]
 
     def resizeSubPlot(self):
+        ''' изменяем кол-во подграфов в графике '''
         self.fig.clear()
         # self.fig.cla()
         # self.neededReDrow = True
@@ -127,10 +132,11 @@ class plotter():
                                   self.plotGrid[(cyrrX, cyrrY)]['graphDem'] == '3D')
                 else:
                     self.moveAxis(self.defineax(cyrrX, cyrrY))
-        for currEqn in self.plotGrid.keys(): # строим графики
+        for currEqn in self.plotGrid.keys():  # строим графики
             self.plotCurrEqn(*currEqn)
 
-    def checkType(self, dictEqn):  # переписать целиком
+    def checkType(self, dictEqn):
+        ''' проверяем сходимость подграфа и графиков, на нем построенных '''
         lType, lDem = [], []
         for i in dictEqn['numbers']:
             lType.append(self.list_eqn[i].graphType)
@@ -156,7 +162,7 @@ class plotter():
             elif fFFT and fNorm:
                 return False
             else:
-                dictEqn['graphDem']='3D'
+                dictEqn['graphDem'] = '3D'
                 dictEqn['graphType'] = 'norm'
                 self.convert23D(dictEqn['numbers'])
                 return True
@@ -170,8 +176,9 @@ class plotter():
             dictEqn['graphType'] = 'norm'
             self.convert23D(dictEqn['numbers'])
             return True
-        
+
     def moveAxis(self, ax, d3d=False):
+        ''' перемещаем начало координат в 0 в включаем сетку '''
         if d3d:
             ax.spines['top'].set_visible(False)
             ax.spines['bottom'].set_visible(False)
@@ -186,10 +193,11 @@ class plotter():
             ax.spines['right'].set_visible(False)
 
     def plotCurrEqn(self, currX, currY, clear=False):
+        ''' перестраиваем выбранннй подграф '''
         if (currX, currY) not in self.plotGrid.keys():
             ax = self.defineax(currX, currY)
             if clear:
-                ax.clear()            
+                ax.clear()
             self.moveAxis(ax)
             return
         listEqn = self.plotGrid[(currX, currY)]['numbers']
@@ -219,6 +227,7 @@ class plotter():
 
     # если включить отображение - true, иначе false
     def changeVisible(self, name, visible):
+        ''' изменяем видимость графика '''
         number = int(name[7:])  # IconEnN
         if number < len(self.list_eqn) and self.list_eqn[number] != None:
             if visible:
@@ -236,6 +245,7 @@ class plotter():
                         self.list_eqn[number].fftxpos, self.list_eqn[number].fftypos, True)
 
     def replotGraph(self):
+        ''' перестраивает график с 0 '''
         self.plotGrid = dict()
         maxx, maxy = 0, 0
         for currEqn in range(len(self.list_eqn)):
@@ -262,6 +272,7 @@ class plotter():
                         self.list_eqn[currEqn].fftxpos, self.list_eqn[currEqn].fftypos)]['ax'])
 
     def defineFFTPos(self, Eqn):
+        ''' определяет где расположить fft '''
         if not (Eqn.userDefineFFT):
             if self.fftPlot == 'bottom':
                 Eqn.xposition, Eqn.yposition = Eqn.origxpos * 2, Eqn.origypos
@@ -308,8 +319,9 @@ class plotter():
                         'graphDem': '2D', 'graphType': 'fft', 'numbers': [eqnNum], 'ax': self.defineax(eqn.fftxpos, eqn.fftypos)}})
                     self.moveAxis(self.defineax(
                         eqn.fftxpos, eqn.fftypos), False)
-                    
+
     def convertAxes23D(self, ax):
+        ''' подменяет заданный подграф 3хмерным '''
         ax.clear()
         ax.set_axis_off()
         gridSpec = ax.get_subplotspec()
@@ -330,7 +342,7 @@ class plotter():
                 return self.ax[ypos]
         elif self.maxyPos == 0:
             self.ax[xpos] = self.fig.add_subplot(
-                self.maxxPos + 1, self.maxyPos + 1, ind+1, projection='3d')
+                self.maxxPos + 1, self.maxyPos + 1, ind + 1, projection='3d')
             if (xpos, ypos) in self.plotGrid.keys():
                 self.plotGrid[(xpos, ypos)]['ax'] = self.ax[xpos]
             return self.ax[xpos]
@@ -342,11 +354,11 @@ class plotter():
             return self.ax[xpos, ypos]
 
     def convert23D(self, numbers):
-
+        ''' конвертирует типы всез графиков, построенных в заданном подграфе в 3D '''
         for i in numbers:
             eqn = self.list_eqn[i]
             if eqn.graphDem != '3D':  # оптимизируем
-    
+
                 if eqn.graphType != 'implicit':
                     eqn.graphDem = '3D'
                     eqn.graphType = 'norm'
@@ -376,6 +388,7 @@ class plotter():
         self.plotCurrEqn(xfftpos, yfftpos, True)
 
     def checkNeedResize(self):
+        ''' проверяет необходимость изменения кол-ва подграфиков '''
         maxx, maxy = 0, 0
         if len(self.plotGrid.keys()) != 0:
             for i in self.plotGrid.keys():
@@ -391,6 +404,7 @@ class plotter():
             self.resizeSubPlot()
 
     def checkNewEqn(self, num, fft):
+        ''' проверка нового уравнения на возможность его построить в существующих осях '''
         eqn = self.list_eqn[num]
         if not (fft):
             xpos, ypos = eqn.xposition, eqn.yposition
@@ -409,7 +423,8 @@ class plotter():
                     if self.plotGrid[(xpos, ypos)]['graphDem'] == '2D':
                         self.plotGrid[(xpos, ypos)]['graphDem'] == '3D'
                         self.plotGrid[(xpos, ypos)]['graphType'] == 'norm'
-                        self.convert23D(self.plotGrid[(xpos, ypos)]['numbers'])
+                        self.convert23D(
+                            self.plotGrid[(xpos, ypos)]['numbers'])
                         self.plotCurrEqn(xpos, ypos, True)
                         return False
                     else:

@@ -26,19 +26,19 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 
 # наследуемся от некоторых объектов
 
-class Window(QMainWindow): #Создаем главное окно приложения
-    def __init__(self, parent=None): 
+class Window(QMainWindow):  # Создаем главное окно приложения
+    ''' обект создает главное окно программы со всеми объектами на нем, а так же действиями '''
+    def __init__(self, parent=None):
+        ''' создаем объект '''
         super().__init__(parent)
         Font = QFont("Courier", 12)
         app.setFont(Font)
-        self.setWindowTitle("Cos calc")
+        self.setWindowTitle("GraphCalc")
         self.PlotGraph = plotter(self)
         self.resize(MainWindowSize[0], MainWindowSize[1])  # размеры
         self._initialData()
         self._createActions()
         self._createMenuBar()
-        # self._createToolBarActions()
-        # self._createToolBars()
         self._createStatusBar()
         self._connectActions()
         self._createFrames()
@@ -46,12 +46,14 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         # self._createContextMenu()
     # @property
     def _initialData(self):
+        ''' задаем глобальные переменные для объекта Window'''
         # здесь гениальным образом загружаем данные их xml
         # и переопределяем параметры
         self.countEqn = 1
         self.eqnDict = {}
 
     def _createMenuBar(self):
+        ''' создаем меню бар (верхняя строчка) '''
         menuBar = self.menuBar()
         # Вкладка - Файл
         fileMenu = menuBar.addMenu("&Файл")
@@ -73,6 +75,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         helpMenu.addAction(self.aboutAction)
         
     def _createToolBars(self):  # создаем toolBar
+        ''' создает toolbar '''
         MainToolBar = QToolBar()
         MainToolBar.setIconSize(QSize(32, 32))
         MainToolBar.setFloatable(False)  # нельзя перетаскивать
@@ -93,10 +96,12 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         #self.addToolBar(Qt.LeftToolBarArea, helpToolBar)
 
     def _createStatusBar(self):
+        ''' создает строку состояния снизу '''
         self.statusbar = self.statusBar()
         self.statusbar.showMessage("Ready", 3000)
         
     def _createActions(self):
+        ''' создает действия под кнопки '''
         self.newAction = QAction("&Новый", self)
         self.openAction = QAction("&Открыть...", self)  # пример
         self.saveAction = QAction("&Сохранить", self)
@@ -113,14 +118,9 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         self.pasteAction.setShortcut(QKeySequence.Paste)
         self.cutAction.setShortcut(QKeySequence.Cut)
 
-    def _createToolBarActions(self):
-        # Действия на tolbar
-        self.runAction = QAction(
-            QIcon("resources/PLAY.svg"), "Построить графики", self)
-        self.breakAction = QAction(
-            QIcon("resources/STOP.svg"), "Остановить выполнение", self)
         
     def _createContextMenu(self):
+        ''' создает контекстное меню '''
         # Определяем контекстное меню
         self.centralWidget.setContextMenuPolicy(Qt.ActionsContextMenu)
         # добавляем действия в контекстное меню
@@ -133,9 +133,11 @@ class Window(QMainWindow): #Создаем главное окно прилож�
 
     @pyqtSlot()
     def _connectActions(self):
+        ''' создает реакцию на закрытие окна '''
         self.exitAction.triggered.connect(self.close)
 
     def _createFrames(self):
+        ''' создает 3 фрейма в главном окне и добавляет область под уравнения '''
         global eqn_list  # eqnLayout
         hbox = QGridLayout(self)
         
@@ -237,6 +239,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         self.createToolFrame()
         
     def createGraphFrame(self):
+        ''' создает область с графиком '''
         self.canvas = FigureCanvas(self.PlotGraph.fig)
         self.canvas.figure = self.PlotGraph.fig
         self.toolbar = NavigationToolbar(self.canvas, self)
@@ -248,6 +251,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         self.canvas.flush_events()
 
     def createToolFrame(self):
+        ''' создает фрейм с настройками '''
         # self.bottomleft.setStyleSheet('QFrame {border: none}')
         self.settingLayout = QVBoxLayout()  # self.bottomleft)
         self.settingLayout.setSpacing(0)
@@ -274,6 +278,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         # self.PlotGraph.fftPlot = 'on_bottom'  # создать под это выпадающее меню
 
     def createFFTList(self):
+        ''' создаем список настроек отображения спектра '''
         group_box = QGroupBox()  # 'Настройки отображения спектра')
         buttonList = []
         toggle_button = QPushButton('Отображение спектра')
@@ -360,6 +365,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         self.SpecShowButtonList = [ShowBottom, ShowLeft, ShowOff, ShowRight, ShowTop] 
         
     def createComplexIntList(self):
+        ''' создаем список настроек отображения комплексных величин '''
         group_box = QGroupBox()  # 'Настройки отображения спектра')
         buttonList = []
         toggle_button = QPushButton('Отображение комплексных величин')
@@ -427,6 +433,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
 
     @pyqtSlot()
     def changeSpectrumShow(self):
+        ''' действие под кнопки настройки отображения спектра '''
         name = self.sender().objectName()
         QButton = self.sender()
         if QButton.isChecked():
@@ -448,6 +455,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         self.ReDrawCanvas()
     @pyqtSlot()
     def changeComplexPart(self):
+        ''' действие под настройки отображения комплексных чисел '''
         QButton = self.sender()
         if QButton.isChecked():
             self.PlotGraph.complexPart.append(QButton.objectName())
@@ -459,6 +467,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         self.ReDrawCanvas()
     @pyqtSlot()
     def changeGroupVisible(self):
+        ''' действие под изменение видимости графика '''
         name = self.sender().objectName()
         CDict = self.setDict[name]
         if CDict[0].isHidden():
@@ -472,6 +481,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
 
     @pyqtSlot()
     def addNewEqn(self):
+        ''' действие для добавления нового уравнения '''
         eqn1 = QLineEdit(self.eqn_list)
         showEqn = QPushButton(self.eqn_list)
         showEqn.setIcon(QIcon("resources/SHOW.svg"))
@@ -489,6 +499,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
 
     @pyqtSlot()
     def myfunc(self):
+        ''' написано новое уравнение '''
         name = self.sender().objectName()
         newEquation = self.sender().text()
         Button = self.eqn_list.findChildren(
@@ -501,6 +512,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         # переадресация на парсер
     @pyqtSlot()
     def eqnShow(self):
+        ''' действие для изменения видимости урвнения '''
         QButton = self.sender()
         if not(QButton.isChecked()):
             # print('Кнопка вверх')
@@ -516,6 +528,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
             self.PlotGraph.changeVisible(QButton.objectName(), False)
         self.ReDrawCanvas()
     def showErrorEqn(self, number, strErr):
+        ''' вывести сообщение об ошибке в уравнении '''
         # ErrEqn = self.eqn_list.findChildren(QLineEdit, 'eqn' + str(number))
         ErrQButton = self.eqn_list.findChildren(
             QPushButton, 'IconEqn' + str(number))
@@ -527,6 +540,7 @@ class Window(QMainWindow): #Создаем главное окно прилож�
         ErrQButton.setToolTip(strErr)
         ErrQButton.setEnabled(False)  # отключаем кнопку
     def ReDrawCanvas(self):
+        ''' перестроить (обновить) график '''
         self.GraphLayout.removeWidget(self.canvas)
         self.GraphLayout.removeWidget(self.toolbar)
         self.canvas = FigureCanvas(self.PlotGraph.fig)

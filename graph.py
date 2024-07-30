@@ -11,7 +11,7 @@ import numpy as np
 
 # определяем класс для хранения данных графиков
 class dataGraph():
-
+    ''' объект отвечает за параметры отдельно взятого уравнения - размерность, коорд точек итд '''
     def __init__(self, name, num, parser, parent):  # перечисляем все параметры
         self.name = name  # number
         self.num = num
@@ -19,6 +19,7 @@ class dataGraph():
         self.parent = parent
         self.initParam()
     def initParam(self):
+        ''' задаем начальное состояние параметров '''
         self.symbolsType = type(sp.symbols(']'))
         self.show = True
         self.color = None  # use как cmap lkz 3d surface
@@ -60,6 +61,7 @@ class dataGraph():
 
         
     def updateFunc(self, eqn, new):
+        ''' получаем параметры уравнения '''
         xp, yp = self.xposition, self.yposition
         xfft, yfft = self.fftxpos, self.fftypos
         self.varOld = self.expressedVar
@@ -139,6 +141,7 @@ class dataGraph():
         self.defineDem()
         self.plotGraph()
     def plotGraph(self):
+        ''' строим график sympy, как опорный при выводе графика на экран'''
         if self.recognizeFuncLeft == None or self.recognizeFuncRight == None:
             return
         if type(self.recognizeFuncLeft) == self.symbolsType:
@@ -180,6 +183,7 @@ class dataGraph():
         plt.close(backend.fig)
         
     def plotPLTGraph(self, ax):
+        ''' строим график для отображения на экране'''
         if self.plotData == None or self.show == False:
             return 
         if not (self.fftshow):
@@ -232,6 +236,7 @@ class dataGraph():
                                   rstride=self.stride[0], cstride=self.stride[1])
 
     def plotFFT(self, ax):
+        ''' строим FFT '''
         if self.show == False:
             return
         elif type(self.x) == type(None) or type(self.y) == type(None):
@@ -284,6 +289,7 @@ class dataGraph():
             ax.set_zlabel('Intensity')            
 
     def defineDem(self):
+        ''' определяет реальную размерность уравнения '''
         cVarR, cVarL = self.recognizeFuncRight.atoms(
                 sp.Symbol), self.recognizeFuncLeft.atoms(sp.Symbol)
         cVar = set()
